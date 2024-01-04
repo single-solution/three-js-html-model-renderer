@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>3D Model Viewer</title>
+	<style>
+		body {
+			margin: 0;
+		}
+
+		canvas {
+			width: 100%;
+			height: 100%
+		}
+	</style>
+</head>
+
+<body>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+	<script>
+		let scene, camera, renderer, model, controls;
+
+		function init() {
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color(0x5a5a5a);
+
+			camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 5000);
+			camera.position.set(800, 100, 1000);
+
+			renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			renderer.gammaOutput = true;
+			renderer.gammaFactor = 4.2;
+			renderer.physicallyCorrectLights = true;
+			document.body.appendChild(renderer.domElement);
+
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+			// Balanced ambient light
+			let ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+			scene.add(ambientLight);
+
+			// Key light
+			let keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+			keyLight.position.set(-1, 1, 1);
+			scene.add(keyLight);
+
+			// Fill light
+			let fillLight = new THREE.DirectionalLight(0xffffff, 1.4);
+			fillLight.position.set(2, 1, 1);
+			scene.add(fillLight);
+
+			// Back light
+			let backLight = new THREE.DirectionalLight(0xffffff, 1.5);
+			backLight.position.set(1, -1, -1);
+			scene.add(backLight);
+
+			let loader = new THREE.GLTFLoader();
+			loader.load('/model.glb', function (gltf) {
+				model = gltf.scene.children[0];
+				model.scale.set(0.5, 0.5, 0.5);
+				model.traverse(function (child) {
+					if (child.isMesh) {
+						child.material.transparent = false;
+						child.material.opacity = 1;
+						child.material.depthWrite = true;
+						child.material.depthTest = true;
+						child.material.side = THREE.FrontSide;
+						child.renderOrder = 1;
+					}
+				});
+
+				scene.add(gltf.scene);
+
+				centerCameraOnModel(model);
+
+				animate();
+			});
+		}
+
+
+		function centerCameraOnModel(model) {
+			const box = new THREE.Box3().setFromObject(model);
+			const center = box.getCenter(new THREE.Vector3());
+
+			// Set orbit controls target to the model's center
+			controls.target = center;
+
+			// Optional: Limit vertical orbit
+			// controls.maxPolarAngle = Math.PI / 2; // Uncomment to limit vertical movement
+
+			camera.lookAt(center);
+		}
+
+		function animate() {
+			renderer.render(scene, camera);
+			requestAnimationFrame(animate);
+		}
+
+		init();
+	</script>
+</body>
+
+</html>
